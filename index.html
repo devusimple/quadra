@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quadra – QR code generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{bg:'var(--bg)',surf:'var(--surf)',ink:'var(--ink)',mute:'var(--mute)',line:'var(--line)',acc:'var(--acc)',plate:'var(--plate)',field:'var(--field)'},fontFamily:{display:['Bricolage Grotesque','Avenir Next','system-ui','sans-serif'],sans:['DM Sans','system-ui','sans-serif']}}}}
+</script>
+<style>
+:root{--bg:#E8ECF4;--surf:#FFFFFF;--ink:#0F1B3D;--mute:#56627F;--line:#D3DAE9;--acc:#FFB400;--plate:#0F1B3D;--plateink:#C5CFEC;--field:#F3F5FA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;--plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429}}
+:root[data-theme="dark"]{--bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;--plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429}
+html,body{height:auto;background:var(--bg)}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.plate :focus-visible{outline-color:var(--acc)}
+.field{width:100%;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:.75rem .9rem;font-size:1rem;color:var(--ink)}
+.field::placeholder{color:var(--mute);opacity:.7}
+.field:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 55%,transparent)}
+textarea.field{resize:vertical;min-height:7rem}
+.seg{display:flex;gap:4px;padding:4px;background:var(--field);border:1px solid var(--line);border-radius:16px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:1 0 auto;padding:.55rem .95rem;border-radius:12px;font-weight:600;font-size:.9rem;color:var(--mute);white-space:nowrap;transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(15,27,61,.12)}
+.plate .seg{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14)}
+.plate .seg button{color:var(--plateink)}
+.plate .seg button[aria-pressed="true"]{background:var(--acc);color:#0F1B3D;box-shadow:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.8rem 1.1rem;border-radius:14px;font-weight:600;font-size:.95rem;transition:transform .12s,opacity .15s}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-pri{background:var(--acc);color:#0F1B3D}
+.btn-out{border:1px solid rgba(255,255,255,.28);color:#fff}
+.btn-out:hover:not(:disabled){background:rgba(255,255,255,.08)}
+.opt{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:.8rem .5rem;border:1px solid var(--line);border-radius:14px;background:var(--field);font-weight:600;font-size:.875rem;color:var(--mute)}
+.opt[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--surf);box-shadow:0 0 0 1px var(--ink)}
+.opt svg{width:34px;height:34px;color:currentColor}
+.swatch{width:2.25rem;height:2.25rem;border-radius:999px;border:1px solid var(--line);position:relative;overflow:hidden;flex:none}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surf),0 0 0 4px var(--ink)}
+.swatch i{position:absolute;inset:0;clip-path:polygon(100% 0,100% 100%,0 100%)}
+input[type=color]{appearance:none;border:0;padding:0;width:100%;height:100%;background:none;cursor:pointer}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:0}
+input[type=range]{accent-color:var(--ink);width:100%}
+.mark{position:absolute;width:22px;height:22px;border:3px solid var(--acc)}
+.reveal{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.reveal{animation:none}.btn{transition:none}}
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+  <header class="flex items-center gap-3 mb-6 sm:mb-10">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="var(--plate)"/><path d="M7 7h8v8H7zM19 7h8v8h-8zM7 19h8v8H7z" fill="none" stroke="#FFB400" stroke-width="2"/><path d="M10 10h2v2h-2zM22 10h2v2h-2zM10 22h2v2h-2zM19 19h3v3h-3zM24 24h3v3h-3zM24 19h3v2h-3z" fill="#fff"/></svg>
+    <span class="font-display font-extrabold text-xl tracking-tight">Quadra</span>
+  </header>
+
+  <div class="grid gap-5 lg:gap-7 lg:grid-cols-[minmax(0,1fr)_410px]">
+    <section class="lg:col-start-1 bg-surf border border-line rounded-3xl p-5 sm:p-8" aria-labelledby="h1">
+      <h1 id="h1" class="font-display font-extrabold text-3xl sm:text-5xl tracking-tight leading-[1.05]">Create a QR code</h1>
+      <p class="text-mute mt-3 mb-6 max-w-md">Choose what it opens, style it, then download. Everything is generated in your browser.</p>
+      <div class="seg" role="tablist" aria-label="QR code content" id="tabs"></div>
+      <div id="fields" class="mt-5 grid gap-4"></div>
+    </section>
+
+    <aside class="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start lg:sticky lg:top-6">
+      <div class="plate bg-plate rounded-3xl p-4 sm:p-6 text-white">
+        <div class="relative p-3 sm:p-4">
+          <span class="mark" style="top:0;left:0;border-right:0;border-bottom:0;border-top-left-radius:8px"></span>
+          <span class="mark" style="top:0;right:0;border-left:0;border-bottom:0;border-top-right-radius:8px"></span>
+          <span class="mark" style="bottom:0;left:0;border-right:0;border-top:0;border-bottom-left-radius:8px"></span>
+          <span class="mark" style="bottom:0;right:0;border-left:0;border-top:0;border-bottom-right-radius:8px"></span>
+          <div class="relative rounded-2xl overflow-hidden mx-auto" style="max-width:340px">
+            <div id="preview" class="reveal" role="img" aria-label="Generated QR code preview"></div>
+            <div id="empty" class="absolute inset-0 grid place-items-center text-center p-6 font-semibold" style="color:#0F1B3D">Enter something on the left and your code appears here.</div>
+          </div>
+        </div>
+        <p id="meta" class="text-center text-sm mt-3" style="color:var(--plateink)">&nbsp;</p>
+        <p id="warn" class="text-sm mt-3 rounded-xl px-3 py-2 hidden" role="status" style="background:rgba(255,180,0,.16);color:#FFD36B"></p>
+
+        <div class="mt-5">
+          <div class="text-sm font-semibold mb-2" id="szl">Download size</div>
+          <div class="seg" role="group" aria-labelledby="szl" id="sizes"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <button class="btn btn-pri" id="dlPng" type="button">Download PNG</button>
+          <button class="btn btn-out" id="dlSvg" type="button">Download SVG</button>
+          <button class="btn btn-out col-span-2" id="copy" type="button">Copy image</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="lg:col-start-1 bg-surf border border-line rounded-3xl p-5 sm:p-8" aria-labelledby="h2">
+      <h2 id="h2" class="font-display font-extrabold text-2xl tracking-tight mb-5">Style</h2>
+
+      <div class="text-sm font-semibold mb-2" id="shl">Shape</div>
+      <div class="grid grid-cols-3 gap-3" role="group" aria-labelledby="shl" id="shapes"></div>
+
+      <div class="grid sm:grid-cols-2 gap-5 mt-6">
+        <div>
+          <label class="text-sm font-semibold block mb-2" for="fg">Code color</label>
+          <div class="flex items-center gap-3"><span class="swatch" style="width:2.75rem;height:2.75rem"><input type="color" id="fg" value="#0F1B3D"></span><output id="fgv" class="font-medium text-mute">#0F1B3D</output></div>
+        </div>
+        <div>
+          <label class="text-sm font-semibold block mb-2" for="bg">Background</label>
+          <div class="flex items-center gap-3"><span class="swatch" style="width:2.75rem;height:2.75rem"><input type="color" id="bg" value="#FFFFFF"></span><output id="bgv" class="font-medium text-mute">#FFFFFF</output></div>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3 mt-4" id="presets" role="group" aria-label="Color presets"></div>
+
+      <div class="mt-7">
+        <div class="text-sm font-semibold mb-1" id="ecl">Error correction</div>
+        <p class="text-sm text-mute mb-2">Higher levels still scan when the code is scratched or covered, but the pattern gets denser.</p>
+        <div class="seg" role="group" aria-labelledby="ecl" id="eccs"></div>
+      </div>
+
+      <div class="mt-7">
+        <div class="flex justify-between text-sm font-semibold mb-2"><label for="margin">Quiet margin</label><output id="mv" class="text-mute font-medium">2 modules</output></div>
+        <input type="range" id="margin" min="0" max="8" value="2">
+      </div>
+    </section>
+  </div>
+  <p class="text-center text-sm text-mute mt-8">Nothing you enter leaves this page.</p>
+</div>
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 px-4 py-3 rounded-2xl text-sm font-semibold shadow-lg opacity-0 pointer-events-none transition-opacity" style="background:#0F1B3D;color:#fff;border:1px solid rgba(255,255,255,.2);margin-bottom:env(safe-area-inset-bottom,0px)" role="status" aria-live="polite"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+if(window.qrcode)qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
+const wesc=s=>s.replace(/([\\;,:"])/g,'\\$1');
+const TYPES={
+ url:{label:'Link',fields:[{k:'url',label:'Web address',ph:'example.com/menu',type:'url'}],build:v=>{const u=(v.url||'').trim();return u&&!/^[a-z][a-z0-9+.-]*:/i.test(u)?'https://'+u:u}},
+ text:{label:'Text',fields:[{k:'text',label:'Message',ph:'Anything you want people to read',area:1}],build:v=>v.text||''},
+ wifi:{label:'Wi-Fi',fields:[{k:'ssid',label:'Network name',ph:'Home network'},{k:'pass',label:'Password',ph:'Leave empty for open networks'},{k:'sec',label:'Security',sel:[['WPA','WPA / WPA2 / WPA3'],['WEP','WEP'],['nopass','None']]}],build:v=>{if(!(v.ssid||'').trim())return'';const t=v.sec||'WPA';return `WIFI:T:${t};S:${wesc(v.ssid)};${t==='nopass'?'':'P:'+wesc(v.pass||'')+';'};`}},
+ email:{label:'Email',fields:[{k:'to',label:'Send to',ph:'name@example.com',type:'email'},{k:'sub',label:'Subject',ph:'Optional'},{k:'body',label:'Message',ph:'Optional',area:1}],build:v=>{if(!(v.to||'').trim())return'';const p=[];if(v.sub)p.push('subject='+encodeURIComponent(v.sub));if(v.body)p.push('body='+encodeURIComponent(v.body));return 'mailto:'+v.to.trim()+(p.length?'?'+p.join('&'):'')}},
+ phone:{label:'Phone',fields:[{k:'num',label:'Phone number',ph:'+1 555 010 0199',type:'tel'}],build:v=>(v.num||'').trim()?'tel:'+v.num.replace(/[^\d+]/g,''):''}
+};
+const st={type:'url',shape:'rounded',fg:'#0F1B3D',bg:'#FFFFFF',ecc:'M',margin:2,size:1024};
+const vals={url:{},text:{},wifi:{sec:'WPA'},email:{},phone:{}};
+let current=null,dir='';
+
+/* ---------- QR rendering ---------- */
+function makeQR(text){const q=qrcode(0,st.ecc);q.addData(text);q.make();return q}
+function toSVG(q,px){
+  const n=q.getModuleCount(),m=st.margin,t=n+2*m,sq=st.shape==='square';
+  const fin=(r,c)=>(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7);
+  let d='';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+    if(fin(r,c)||!q.isDark(r,c))continue;
+    const x=c+m,y=r+m;
+    if(st.shape==='dots')d+=`M${x+.08} ${y+.5}a.42 .42 0 1 0 .84 0a.42 .42 0 1 0 -.84 0`;
+    else if(st.shape==='rounded')d+=`M${x+.3} ${y}h.4a.3 .3 0 0 1 .3 .3v.4a.3 .3 0 0 1 -.3 .3h-.4a.3 .3 0 0 1 -.3 -.3v-.4a.3 .3 0 0 1 .3 -.3z`;
+    else d+=`M${x} ${y}h1v1h-1z`;
+  }
+  const ro=sq?0:st.shape==='rounded'?1.4:2.6,ri=sq?0:st.shape==='rounded'?.8:1.5;
+  let f='';
+  [[0,0],[n-7,0],[0,n-7]].forEach(([r,c])=>{const x=c+m,y=r+m;
+    f+=`<rect x="${x+.5}" y="${y+.5}" width="6" height="6" rx="${ro}" fill="none" stroke="${st.fg}" stroke-width="1"/><rect x="${x+2}" y="${y+2}" width="3" height="3" rx="${ri}" fill="${st.fg}"/>`});
+  const size=px?`width="${px}" height="${px}"`:'width="100%" style="display:block"';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" ${size}${sq?' shape-rendering="crispEdges"':''}><rect width="${t}" height="${t}" fill="${st.bg}"/><path d="${d}" fill="${st.fg}"/>${f}</svg>`;
+}
+function lum(h){const [r,g,b]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*r+.7152*g+.0722*b}
+function render(){
+  const text=TYPES[st.type].build(vals[st.type]);
+  const empty=!text.trim();
+  const warn=$('#warn');let msg='';
+  try{
+    const q=makeQR(empty?'quadra':text);
+    current=empty?null:{q,text};
+    $('#preview').innerHTML=toSVG(q);
+    $('#preview').style.opacity=empty?.14:1;
+    const n=q.getModuleCount();
+    $('#meta').textContent=empty?'\u00a0':`${n} × ${n} modules, error correction ${st.ecc}`;
+  }catch(e){
+    current=null;$('#preview').innerHTML='';
+    msg='That is too much for one QR code. Shorten the content or lower the error correction level.';
+  }
+  $('#empty').style.display=empty?'grid':'none';
+  if(!msg&&!empty){
+    const a=lum(st.fg),b=lum(st.bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+    if(ratio<3)msg='Low contrast between the code and background. Some scanners may not read it.';
+    else if(a>b)msg='The code is lighter than its background. Some older scanners cannot read inverted codes.';
+  }
+  warn.textContent=msg;warn.classList.toggle('hidden',!msg);
+  ['#dlPng','#dlSvg','#copy'].forEach(s=>$(s).disabled=!current);
+}
+
+/* ---------- UI ---------- */
+function drawTabs(){
+  $('#tabs').innerHTML=Object.entries(TYPES).map(([k,t])=>`<button type="button" role="tab" aria-selected="${k===st.type}" data-k="${k}">${t.label}</button>`).join('');
+}
+function drawFields(){
+  const t=TYPES[st.type],v=vals[st.type];
+  $('#fields').innerHTML=t.fields.map(f=>{
+    const id='f-'+f.k,val=esc(v[f.k]||'');
+    const c=f.sel?`<select id="${id}" data-k="${f.k}" class="field">${f.sel.map(o=>`<option value="${o[0]}"${(v[f.k]||f.sel[0][0])===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>`
+      :f.area?`<textarea id="${id}" data-k="${f.k}" class="field" placeholder="${esc(f.ph)}">${val}</textarea>`
+      :`<input id="${id}" data-k="${f.k}" class="field" type="${f.type||'text'}" placeholder="${esc(f.ph)}" value="${val}" autocomplete="off" ${f.type==='url'?'inputmode="url" autocapitalize="off"':''}>`;
+    return `<div><label for="${id}" class="block text-sm font-semibold mb-1.5">${f.label}</label>${c}</div>`}).join('');
+}
+const glyph=s=>{const p=[[2,2],[18,2],[2,18],[18,18]];const sh=([x,y])=>s==='dots'?`<circle cx="${x+7}" cy="${y+7}" r="6.5"/>`:`<rect x="${x}" y="${y}" width="14" height="14" rx="${s==='rounded'?5:0}"/>`;return `<svg viewBox="0 0 34 34" fill="currentColor" aria-hidden="true">${p.map(sh).join('')}</svg>`};
+function drawShapes(){
+  $('#shapes').innerHTML=[['square','Square'],['rounded','Rounded'],['dots','Dots']].map(([k,l])=>`<button type="button" class="opt" data-s="${k}" aria-pressed="${st.shape===k}">${glyph(k)}${l}</button>`).join('');
+}
+function drawSeg(id,items,key,fmt){
+  $(id).innerHTML=items.map(i=>`<button type="button" data-v="${i}" aria-pressed="${st[key]==i}">${fmt?fmt(i):i}</button>`).join('');
+}
+const PRESETS=[['#0F1B3D','#FFFFFF','Navy on white'],['#0B5D4B','#EEF8F3','Green on mint'],['#7A1F5C','#FFF3FA','Plum on blush'],['#1F3FD1','#EEF1FF','Blue on periwinkle'],['#000000','#FFFFFF','Black on white']];
+function drawPresets(){
+  $('#presets').innerHTML=PRESETS.map(([f,b,n],i)=>`<button type="button" class="swatch" data-i="${i}" title="${n}" aria-label="${n}" aria-pressed="${st.fg.toLowerCase()===f.toLowerCase()&&st.bg.toLowerCase()===b.toLowerCase()}" style="background:${b}"><i style="background:${f}"></i></button>`).join('');
+}
+function syncColors(){$('#fg').value=st.fg;$('#bg').value=st.bg;$('#fgv').textContent=st.fg.toUpperCase();$('#bgv').textContent=st.bg.toUpperCase();
+  $('#fg').parentElement.style.background=st.fg;$('#bg').parentElement.style.background=st.bg;drawPresets()}
+
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.type=b.dataset.k;drawTabs();drawFields();render()});
+$('#fields').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;vals[st.type][k]=e.target.value;render()});
+$('#shapes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.shape=b.dataset.s;drawShapes();render()});
+$('#eccs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.ecc=b.dataset.v;drawSeg('#eccs',['L','M','Q','H'],'ecc',x=>({L:'Low',M:'Medium',Q:'Quartile',H:'High'})[x]);render()});
+$('#sizes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.size=+b.dataset.v;drawSeg('#sizes',[512,1024,2048],'size',x=>x+' px')});
+$('#fg').addEventListener('input',e=>{st.fg=e.target.value;syncColors();render()});
+$('#bg').addEventListener('input',e=>{st.bg=e.target.value;syncColors();render()});
+$('#presets').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const p=PRESETS[b.dataset.i];st.fg=p[0];st.bg=p[1];syncColors();render()});
+$('#margin').addEventListener('input',e=>{st.margin=+e.target.value;$('#mv').textContent=st.margin+(st.margin===1?' module':' modules');render()});
+
+/* ---------- Export ---------- */
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,2400)}
+async function save(blob,name){
+  let dl=null;try{dl=await claude.use('downloads')}catch(e){}
+  if(dl){try{await dl.save({filename:name,data:blob});toast('Saved '+name);}catch(e){if(e&&e.code!=='declined')toast('Could not save the file here.')}return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Downloading '+name);
+}
+function pngBlob(){return new Promise((res,rej)=>{
+  const img=new Image();
+  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=st.size;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(img,0,0,st.size,st.size);c.toBlob(b=>b?res(b):rej(),'image/png')};
+  img.onerror=rej;
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(toSVG(current.q,st.size));
+})}
+$('#dlPng').addEventListener('click',async()=>{if(!current)return;try{await save(await pngBlob(),'qr-code.png')}catch(e){toast('Could not create the PNG.')}});
+$('#dlSvg').addEventListener('click',()=>{if(!current)return;save(new Blob([toSVG(current.q,st.size)],{type:'image/svg+xml'}),'qr-code.svg')});
+$('#copy').addEventListener('click',async()=>{
+  if(!current)return;
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':pngBlob()})]);toast('Image copied')}
+  catch(e){toast('Copying is not available here. Use Download PNG instead.')}
+});
+
+drawTabs();drawFields();drawShapes();
+drawSeg('#eccs',['L','M','Q','H'],'ecc',x=>({L:'Low',M:'Medium',Q:'Quartile',H:'High'})[x]);
+drawSeg('#sizes',[512,1024,2048],'size',x=>x+' px');
+syncColors();
+if(!window.qrcode){$('#empty').textContent='The QR library failed to load. Check your connection and reload.';}
+else render();
+</script>
+</body>
+</html>
