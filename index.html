@@ -3,261 +3,918 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>Quadra – QR code generator</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script>
-tailwind.config={theme:{extend:{colors:{bg:'var(--bg)',surf:'var(--surf)',ink:'var(--ink)',mute:'var(--mute)',line:'var(--line)',acc:'var(--acc)',plate:'var(--plate)',field:'var(--field)'},fontFamily:{display:['Bricolage Grotesque','Avenir Next','system-ui','sans-serif'],sans:['DM Sans','system-ui','sans-serif']}}}}
-</script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap"
+      media="print" onload="this.media='all'">
+<noscript>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap">
+</noscript>
 <style>
-:root{--bg:#E8ECF4;--surf:#FFFFFF;--ink:#0F1B3D;--mute:#56627F;--line:#D3DAE9;--acc:#FFB400;--plate:#0F1B3D;--plateink:#C5CFEC;--field:#F3F5FA}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;--plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429}}
-:root[data-theme="dark"]{--bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;--plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429}
-html,body{height:auto;background:var(--bg)}
-:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif}
+/* ---------- tokens ---------- */
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --bg:#E8ECF4;--surf:#FFFFFF;--ink:#0F1B3D;--mute:#56627F;--line:#D3DAE9;
+  --acc:#FFB400;--onacc:#0F1B3D;--plate:#0F1B3D;--plateink:#C5CFEC;--field:#F3F5FA;
+  --shadow:0 1px 2px rgba(15,27,61,.10);
+  --font-display:'Bricolage Grotesque','Avenir Next','Segoe UI',system-ui,sans-serif;
+  --font-sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;
+    --plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429;
+    --shadow:0 1px 2px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A0F20;--surf:#131A33;--ink:#EAEFFB;--mute:#93A0C4;--line:#26304F;
+  --plate:#1B2547;--plateink:#C5CFEC;--field:#0E1429;
+  --shadow:0 1px 2px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+
+/* ---------- base ---------- */
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:var(--font-sans);font-size:16px;line-height:1.5;
+  min-height:100vh;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
 :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .plate :focus-visible{outline-color:var(--acc)}
-.field{width:100%;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:.75rem .9rem;font-size:1rem;color:var(--ink)}
-.field::placeholder{color:var(--mute);opacity:.7}
-.field:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 55%,transparent)}
-textarea.field{resize:vertical;min-height:7rem}
-.seg{display:flex;gap:4px;padding:4px;background:var(--field);border:1px solid var(--line);border-radius:16px;overflow-x:auto;scrollbar-width:none}
+.hidden{display:none !important}
+
+/* ---------- shell ---------- */
+.wrap{max-width:72rem;margin-inline:auto;padding:1rem .875rem 1.5rem}
+@media(min-width:640px){.wrap{padding:1.5rem 1.5rem 2rem}}
+@media(min-width:1024px){.wrap{padding:2rem 1.5rem 2.5rem}}
+
+.head{display:flex;align-items:center;gap:.6rem;margin-bottom:1.25rem}
+@media(min-width:640px){.head{margin-bottom:2rem}}
+.brand{display:flex;align-items:center;gap:.6rem;
+  font-family:var(--font-display);font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
+.brand svg{width:32px;height:32px;flex:none}
+#theme{margin-left:auto;width:2.5rem;height:2.5rem;flex:none;border-radius:999px;
+  border:1px solid var(--line);background:var(--surf);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer;padding:0;transition:background .15s}
+#theme:hover{background:var(--field)}
+#theme svg{width:1.1rem;height:1.1rem;display:block}
+
+/* ---------- layout ---------- */
+.layout{display:grid;gap:1rem}
+@media(min-width:640px){.layout{gap:1.25rem}}
+.form-col{order:1;min-width:0}
+.preview-col{order:2;min-width:0}
+.style-col{order:3;min-width:0}
+@media(min-width:1024px){
+  .layout{grid-template-columns:minmax(0,1fr) 400px;gap:1.75rem;align-items:start}
+  .form-col{grid-column:1;grid-row:1}
+  .style-col{grid-column:1;grid-row:2}
+  .preview-col{grid-column:2;grid-row:1 / span 2;position:sticky;top:1.5rem}
+}
+
+.card{background:var(--surf);border:1px solid var(--line);
+  border-radius:1.25rem;padding:1.1rem;min-width:0}
+@media(min-width:640px){.card{border-radius:1.5rem;padding:2rem}}
+
+/* ---------- type ---------- */
+h1{font-family:var(--font-display);font-weight:800;
+  font-size:clamp(1.75rem,6.5vw,3rem);line-height:1.05;letter-spacing:-.025em;
+  margin:0 0 .55rem}
+h2{font-family:var(--font-display);font-weight:800;
+  font-size:1.35rem;letter-spacing:-.02em;margin:0 0 1rem}
+@media(min-width:640px){h2{font-size:1.5rem;margin-bottom:1.25rem}}
+.lede{color:var(--mute);margin:0 0 1.15rem;max-width:32rem;font-size:.95rem}
+@media(min-width:640px){.lede{margin-bottom:1.6rem}}
+.lbl{display:block;font-size:.875rem;font-weight:600;margin-bottom:.5rem}
+.hint{color:var(--mute);font-size:.85rem;margin:-.15rem 0 .6rem}
+.val{color:var(--mute);font-weight:500;font-size:.9rem}
+.section{margin-top:1.6rem}
+@media(min-width:640px){.section{margin-top:1.9rem}}
+.stack{display:grid;gap:1rem;margin-top:1.25rem}
+.row{display:flex;align-items:center;gap:.75rem}
+.lblrow{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.45rem}
+.lblrow label{font-size:.875rem;font-weight:600}
+
+/* ---------- segmented control ---------- */
+.seg{display:flex;gap:.25rem;padding:.25rem;background:var(--field);
+  border:1px solid var(--line);border-radius:1rem;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .seg::-webkit-scrollbar{display:none}
-.seg button{flex:1 0 auto;padding:.55rem .95rem;border-radius:12px;font-weight:600;font-size:.9rem;color:var(--mute);white-space:nowrap;transition:background .15s,color .15s}
+.seg button{
+  flex:1 0 auto;min-height:2.5rem;padding:.5rem .9rem;border:0;background:none;
+  border-radius:.75rem;font:inherit;font-weight:600;font-size:.875rem;
+  color:var(--mute);white-space:nowrap;cursor:pointer;
+  transition:background .15s,color .15s,box-shadow .15s}
 .seg button:hover{color:var(--ink)}
-.seg button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--surf);color:var(--ink);box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(15,27,61,.12)}
+.seg button[aria-selected="true"],
+.seg button[aria-pressed="true"],
+.seg button[aria-checked="true"]{
+  background:var(--surf);color:var(--ink);
+  box-shadow:0 0 0 1px var(--line),var(--shadow)}
 .plate .seg{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.14)}
 .plate .seg button{color:var(--plateink)}
-.plate .seg button[aria-pressed="true"]{background:var(--acc);color:#0F1B3D;box-shadow:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.8rem 1.1rem;border-radius:14px;font-weight:600;font-size:.95rem;transition:transform .12s,opacity .15s}
+.plate .seg button:hover{color:#fff}
+.plate .seg button[aria-pressed="true"]{background:var(--acc);color:var(--onacc);box-shadow:none}
+
+/* ---------- fields ---------- */
+.field{width:100%;background:var(--field);border:1px solid var(--line);
+  border-radius:.85rem;padding:.7rem .85rem;font:inherit;font-size:1rem;
+  color:var(--ink);min-height:2.85rem}
+.field::placeholder{color:var(--mute);opacity:.72}
+.field:focus{border-color:var(--ink);outline:none;
+  box-shadow:0 0 0 3px rgba(255,180,0,.5)}
+textarea.field{resize:vertical;min-height:6.5rem;line-height:1.45}
+select.field{cursor:pointer}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;
+  min-height:2.9rem;padding:.7rem .9rem;border:0;border-radius:.85rem;
+  font:inherit;font-weight:600;font-size:.9rem;cursor:pointer;
+  transition:transform .12s,opacity .15s,background .15s}
 .btn:active:not(:disabled){transform:scale(.98)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-pri{background:var(--acc);color:#0F1B3D}
-.btn-out{border:1px solid rgba(255,255,255,.28);color:#fff}
-.btn-out:hover:not(:disabled){background:rgba(255,255,255,.08)}
-.opt{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:.8rem .5rem;border:1px solid var(--line);border-radius:14px;background:var(--field);font-weight:600;font-size:.875rem;color:var(--mute)}
-.opt[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--surf);box-shadow:0 0 0 1px var(--ink)}
-.opt svg{width:34px;height:34px;color:currentColor}
-.swatch{width:2.25rem;height:2.25rem;border-radius:999px;border:1px solid var(--line);position:relative;overflow:hidden;flex:none}
-.swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surf),0 0 0 4px var(--ink)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn-pri{background:var(--acc);color:var(--onacc)}
+.btn-pri:hover:not(:disabled){filter:brightness(1.05)}
+.btn-out{background:transparent;border:1px solid rgba(255,255,255,.28);color:#fff}
+.btn-out:hover:not(:disabled){background:rgba(255,255,255,.09)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:1rem}
+.actions .full{grid-column:1 / -1}
+@media(max-width:359px){.actions{grid-template-columns:1fr}}
+
+/* ---------- shapes ---------- */
+.shapes{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
+.opt{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.35rem;min-height:4.4rem;padding:.6rem .3rem;
+  border:1px solid var(--line);border-radius:.85rem;background:var(--field);
+  font:inherit;font-weight:600;font-size:.78rem;color:var(--mute);
+  cursor:pointer;transition:background .15s,color .15s,box-shadow .15s}
+.opt:hover{color:var(--ink)}
+.opt[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);
+  background:var(--surf);box-shadow:0 0 0 1px var(--ink)}
+.opt svg{width:1.85rem;height:1.85rem;display:block}
+
+/* ---------- colors ---------- */
+.colors{display:grid;gap:1.1rem;margin-top:1.4rem}
+@media(min-width:640px){.colors{grid-template-columns:1fr 1fr;gap:1.25rem}}
+.colorwrap{width:2.75rem;height:2.75rem;border-radius:999px;border:1px solid var(--line);
+  position:relative;overflow:hidden;flex:none;display:block}
+.colorwrap input[type=color]{appearance:none;-webkit-appearance:none;border:0;padding:0;
+  width:100%;height:100%;background:none;cursor:pointer;display:block}
+.colorwrap input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.colorwrap input[type=color]::-webkit-color-swatch{border:0}
+.colorwrap input[type=color]::-moz-color-swatch{border:0}
+.presets{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.swatch{width:2.25rem;height:2.25rem;border-radius:999px;border:1px solid var(--line);
+  position:relative;overflow:hidden;flex:none;padding:0;cursor:pointer;background:none}
 .swatch i{position:absolute;inset:0;clip-path:polygon(100% 0,100% 100%,0 100%)}
-input[type=color]{appearance:none;border:0;padding:0;width:100%;height:100%;background:none;cursor:pointer}
-input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-input[type=color]::-webkit-color-swatch{border:0}
-input[type=range]{accent-color:var(--ink);width:100%}
-.mark{position:absolute;width:22px;height:22px;border:3px solid var(--acc)}
-.reveal{animation:rise .55s cubic-bezier(.2,.8,.2,1) both}
-@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.reveal{animation:none}.btn{transition:none}}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surf),0 0 0 4px var(--ink)}
+
+/* ---------- range ---------- */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:1.6rem;
+  background:none;cursor:pointer;margin:0;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:999px;
+  background:var(--field);border:1px solid var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+  border-radius:999px;background:var(--ink);border:3px solid var(--surf);
+  margin-top:-8px;box-shadow:0 0 0 1px var(--line)}
+input[type=range]::-moz-range-track{height:6px;border-radius:999px;
+  background:var(--field);border:1px solid var(--line)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:999px;
+  background:var(--ink);border:3px solid var(--surf);box-shadow:0 0 0 1px var(--line)}
+
+/* ---------- preview plate ---------- */
+.plate{background:var(--plate);border-radius:1.25rem;padding:1rem;color:#fff}
+@media(min-width:640px){.plate{border-radius:1.5rem;padding:1.5rem}}
+.frame{position:relative;padding:.65rem}
+@media(min-width:640px){.frame{padding:.9rem}}
+.mark{position:absolute;width:20px;height:20px;border:3px solid var(--acc);pointer-events:none}
+.stage{position:relative;width:100%;max-width:clamp(190px,62vw,340px);
+  margin-inline:auto;aspect-ratio:1/1;border-radius:.9rem;overflow:hidden}
+#preview{width:100%;height:100%;transition:opacity .3s}
+#preview svg{display:block;width:100%;height:auto}
+#empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+  padding:1rem;font-weight:600;font-size:.82rem;line-height:1.35;
+  color:var(--plateink)}
+.meta{text-align:center;font-size:.8rem;margin:.7rem 0 0;color:var(--plateink)}
+.warn{font-size:.82rem;margin:.7rem 0 0;border-radius:.75rem;padding:.55rem .75rem;
+  background:rgba(255,180,0,.16);color:#FFD36B}
+.sizes{margin-top:1.25rem}
+.sizes .lbl{color:#fff;margin-bottom:.5rem}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:calc(1.25rem + env(safe-area-inset-bottom,0px));
+  transform:translateX(-50%);z-index:50;max-width:calc(100vw - 1.5rem);
+  padding:.7rem 1rem;border-radius:1rem;text-align:center;
+  font-size:.85rem;font-weight:600;
+  background:var(--plate);color:#fff;border:1px solid rgba(255,255,255,.2);
+  box-shadow:0 10px 30px rgba(0,0,0,.28);
+  opacity:0;pointer-events:none;transition:opacity .2s}
+
+.foot{text-align:center;font-size:.82rem;color:var(--mute);margin:1.5rem 0 0}
+@media(min-width:640px){.foot{margin-top:2rem}}
+
+/* ---------- motion ---------- */
+.reveal{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .reveal{animation:none}
+  .btn,#preview,#theme{transition:none}
+}
 </style>
 </head>
-<body class="min-h-screen">
-<div class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
-  <header class="flex items-center gap-3 mb-6 sm:mb-10">
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="var(--plate)"/><path d="M7 7h8v8H7zM19 7h8v8h-8zM7 19h8v8H7z" fill="none" stroke="#FFB400" stroke-width="2"/><path d="M10 10h2v2h-2zM22 10h2v2h-2zM10 22h2v2h-2zM19 19h3v3h-3zM24 24h3v3h-3zM24 19h3v2h-3z" fill="#fff"/></svg>
-    <span class="font-display font-extrabold text-xl tracking-tight">Quadra QR</span>
+<body>
+
+<div class="wrap">
+  <header class="head">
+    <span class="brand">
+      <svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="var(--plate)"/><path d="M7 7h8v8H7zM19 7h8v8h-8zM7 19h8v8H7z" fill="none" stroke="#FFB400" stroke-width="2"/><path d="M10 10h2v2h-2zM22 10h2v2h-2zM10 22h2v2h-2zM19 19h3v3h-3zM24 24h3v3h-3zM24 19h3v2h-3z" fill="#fff"/></svg>
+      Quadra
+    </span>
+    <button id="theme" type="button" aria-pressed="false" aria-label="Switch to dark theme"></button>
   </header>
 
-  <div class="grid gap-5 lg:gap-7 lg:grid-cols-[minmax(0,1fr)_410px]">
-    <section class="lg:col-start-1 bg-surf border border-line rounded-3xl p-5 sm:p-8" aria-labelledby="h1">
-      <h1 id="h1" class="font-display font-extrabold text-3xl sm:text-5xl tracking-tight leading-[1.05]">Create a QR code</h1>
-      <p class="text-mute mt-3 mb-6 max-w-md">Choose what it opens, style it, then download. Everything is generated in your browser.</p>
+  <div class="layout">
+
+    <!-- ── form ── -->
+    <section class="card form-col" aria-labelledby="h1">
+      <h1 id="h1">Create a QR code</h1>
+      <p class="lede">Choose what it opens, style it, then download. Everything is generated in your browser.</p>
       <div class="seg" role="tablist" aria-label="QR code content" id="tabs"></div>
-      <div id="fields" class="mt-5 grid gap-4"></div>
+      <div id="fields" class="stack" role="tabpanel" aria-label="Content fields"></div>
     </section>
 
-    <aside class="lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-start lg:sticky lg:top-6">
-      <div class="plate bg-plate rounded-3xl p-4 sm:p-6 text-white">
-        <div class="relative p-3 sm:p-4">
+    <!-- ── preview ── -->
+    <aside class="preview-col">
+      <div class="plate">
+        <div class="frame">
           <span class="mark" style="top:0;left:0;border-right:0;border-bottom:0;border-top-left-radius:8px"></span>
           <span class="mark" style="top:0;right:0;border-left:0;border-bottom:0;border-top-right-radius:8px"></span>
           <span class="mark" style="bottom:0;left:0;border-right:0;border-top:0;border-bottom-left-radius:8px"></span>
           <span class="mark" style="bottom:0;right:0;border-left:0;border-top:0;border-bottom-right-radius:8px"></span>
-          <div class="relative rounded-2xl overflow-hidden mx-auto" style="max-width:340px">
+          <div class="stage">
             <div id="preview" class="reveal" role="img" aria-label="Generated QR code preview"></div>
-            <div id="empty" class="absolute inset-0 grid place-items-center text-center p-6 font-semibold" style="color:#0F1B3D">Enter something on the left and your code appears here.</div>
+            <div id="empty">Enter something on the left and your code appears here.</div>
           </div>
         </div>
-        <p id="meta" class="text-center text-sm mt-3" style="color:var(--plateink)">&nbsp;</p>
-        <p id="warn" class="text-sm mt-3 rounded-xl px-3 py-2 hidden" role="status" style="background:rgba(255,180,0,.16);color:#FFD36B"></p>
 
-        <div class="mt-5">
-          <div class="text-sm font-semibold mb-2" id="szl">Download size</div>
+        <p id="meta" class="meta">&nbsp;</p>
+        <p id="warn" class="warn hidden" role="status" aria-live="polite"></p>
+
+        <div class="sizes">
+          <div class="lbl" id="szl">Download size</div>
           <div class="seg" role="group" aria-labelledby="szl" id="sizes"></div>
         </div>
-        <div class="grid grid-cols-2 gap-3 mt-4">
+
+        <div class="actions">
           <button class="btn btn-pri" id="dlPng" type="button">Download PNG</button>
           <button class="btn btn-out" id="dlSvg" type="button">Download SVG</button>
-          <button class="btn btn-out col-span-2" id="copy" type="button">Copy image</button>
+          <button class="btn btn-out full" id="copy" type="button">Copy image</button>
         </div>
       </div>
     </aside>
 
-    <section class="lg:col-start-1 bg-surf border border-line rounded-3xl p-5 sm:p-8" aria-labelledby="h2">
-      <h2 id="h2" class="font-display font-extrabold text-2xl tracking-tight mb-5">Style</h2>
+    <!-- ── style ── -->
+    <section class="card style-col" aria-labelledby="h2">
+      <h2 id="h2">Style</h2>
 
-      <div class="text-sm font-semibold mb-2" id="shl">Shape</div>
-      <div class="grid grid-cols-3 gap-3" role="group" aria-labelledby="shl" id="shapes"></div>
+      <div class="lbl" id="shl">Shape</div>
+      <div class="shapes" role="group" aria-labelledby="shl" id="shapes"></div>
 
-      <div class="grid sm:grid-cols-2 gap-5 mt-6">
+      <div class="colors">
         <div>
-          <label class="text-sm font-semibold block mb-2" for="fg">Code color</label>
-          <div class="flex items-center gap-3"><span class="swatch" style="width:2.75rem;height:2.75rem"><input type="color" id="fg" value="#0F1B3D"></span><output id="fgv" class="font-medium text-mute">#0F1B3D</output></div>
+          <label class="lbl" for="fg">Code color</label>
+          <div class="row">
+            <span class="colorwrap"><input type="color" id="fg" value="#0F1B3D"></span>
+            <output id="fgv" class="val">#0F1B3D</output>
+          </div>
         </div>
         <div>
-          <label class="text-sm font-semibold block mb-2" for="bg">Background</label>
-          <div class="flex items-center gap-3"><span class="swatch" style="width:2.75rem;height:2.75rem"><input type="color" id="bg" value="#FFFFFF"></span><output id="bgv" class="font-medium text-mute">#FFFFFF</output></div>
+          <label class="lbl" for="bg">Background</label>
+          <div class="row">
+            <span class="colorwrap"><input type="color" id="bg" value="#FFFFFF"></span>
+            <output id="bgv" class="val">#FFFFFF</output>
+          </div>
         </div>
       </div>
-      <div class="flex flex-wrap gap-3 mt-4" id="presets" role="group" aria-label="Color presets"></div>
+      <div class="presets" id="presets" role="group" aria-label="Colour presets"></div>
 
-      <div class="mt-7">
-        <div class="text-sm font-semibold mb-1" id="ecl">Error correction</div>
-        <p class="text-sm text-mute mb-2">Higher levels still scan when the code is scratched or covered, but the pattern gets denser.</p>
+      <div class="section">
+        <div class="lbl" id="ecl">Error correction</div>
+        <p class="hint">Higher levels still scan when the code is scratched or covered, but the pattern gets denser.</p>
         <div class="seg" role="group" aria-labelledby="ecl" id="eccs"></div>
       </div>
 
-      <div class="mt-7">
-        <div class="flex justify-between text-sm font-semibold mb-2"><label for="margin">Quiet margin</label><output id="mv" class="text-mute font-medium">2 modules</output></div>
-        <input type="range" id="margin" min="0" max="8" value="2">
+      <div class="section">
+        <div class="lblrow">
+          <label for="margin">Quiet margin</label>
+          <output id="mv" class="val">2 modules</output>
+        </div>
+        <input type="range" id="margin" min="0" max="8" value="2" aria-describedby="mv">
       </div>
     </section>
+
   </div>
-  <p class="text-center text-sm text-mute mt-8">Nothing you enter leaves this page.</p>
+
+  <p class="foot">Nothing you enter leaves this page.</p>
 </div>
-<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 px-4 py-3 rounded-2xl text-sm font-semibold shadow-lg opacity-0 pointer-events-none transition-opacity" style="background:#0F1B3D;color:#fff;border:1px solid rgba(255,255,255,.2);margin-bottom:env(safe-area-inset-bottom,0px)" role="status" aria-live="polite"></div>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-if(window.qrcode)qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
-const wesc=s=>s.replace(/([\\;,:"])/g,'\\$1');
-const TYPES={
- url:{label:'Link',fields:[{k:'url',label:'Web address',ph:'example.com/menu',type:'url'}],build:v=>{const u=(v.url||'').trim();return u&&!/^[a-z][a-z0-9+.-]*:/i.test(u)?'https://'+u:u}},
- text:{label:'Text',fields:[{k:'text',label:'Message',ph:'Anything you want people to read',area:1}],build:v=>v.text||''},
- wifi:{label:'Wi-Fi',fields:[{k:'ssid',label:'Network name',ph:'Home network'},{k:'pass',label:'Password',ph:'Leave empty for open networks'},{k:'sec',label:'Security',sel:[['WPA','WPA / WPA2 / WPA3'],['WEP','WEP'],['nopass','None']]}],build:v=>{if(!(v.ssid||'').trim())return'';const t=v.sec||'WPA';return `WIFI:T:${t};S:${wesc(v.ssid)};${t==='nopass'?'':'P:'+wesc(v.pass||'')+';'};`}},
- email:{label:'Email',fields:[{k:'to',label:'Send to',ph:'name@example.com',type:'email'},{k:'sub',label:'Subject',ph:'Optional'},{k:'body',label:'Message',ph:'Optional',area:1}],build:v=>{if(!(v.to||'').trim())return'';const p=[];if(v.sub)p.push('subject='+encodeURIComponent(v.sub));if(v.body)p.push('body='+encodeURIComponent(v.body));return 'mailto:'+v.to.trim()+(p.length?'?'+p.join('&'):'')}},
- phone:{label:'Phone',fields:[{k:'num',label:'Phone number',ph:'+1 555 010 0199',type:'tel'}],build:v=>(v.num||'').trim()?'tel:'+v.num.replace(/[^\d+]/g,''):''}
-};
-const st={type:'url',shape:'rounded',fg:'#0F1B3D',bg:'#FFFFFF',ecc:'M',margin:2,size:1024};
-const vals={url:{},text:{},wifi:{sec:'WPA'},email:{},phone:{}};
-let current=null,dir='';
-
-/* ---------- QR rendering ---------- */
-function makeQR(text){const q=qrcode(0,st.ecc);q.addData(text);q.make();return q}
-function toSVG(q,px){
-  const n=q.getModuleCount(),m=st.margin,t=n+2*m,sq=st.shape==='square';
-  const fin=(r,c)=>(r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7);
-  let d='';
-  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
-    if(fin(r,c)||!q.isDark(r,c))continue;
-    const x=c+m,y=r+m;
-    if(st.shape==='dots')d+=`M${x+.08} ${y+.5}a.42 .42 0 1 0 .84 0a.42 .42 0 1 0 -.84 0`;
-    else if(st.shape==='rounded')d+=`M${x+.3} ${y}h.4a.3 .3 0 0 1 .3 .3v.4a.3 .3 0 0 1 -.3 .3h-.4a.3 .3 0 0 1 -.3 -.3v-.4a.3 .3 0 0 1 .3 -.3z`;
-    else d+=`M${x} ${y}h1v1h-1z`;
+/* ══════════════════════════════════════════════════════════════
+   1. QR library loader — async, multi-CDN, with timeout.
+      Never blocks first paint.
+   ══════════════════════════════════════════════════════════════ */
+var qrReady = new Promise(function (resolve, reject) {
+  var urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',
+    'https://unpkg.com/qrcode-generator@1.4.4/qrcode.min.js'
+  ];
+  var i = 0;
+  function next() {
+    if (i >= urls.length) { reject(new Error('qr-library-unavailable')); return; }
+    var s = document.createElement('script');
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (settled) return;
+      settled = true; s.remove(); next();
+    }, 8000);
+    s.src = urls[i++];
+    s.async = true;
+    s.onload = function () {
+      if (settled) return;
+      settled = true; clearTimeout(timer);
+      window.qrcode ? resolve() : next();
+    };
+    s.onerror = function () {
+      if (settled) return;
+      settled = true; clearTimeout(timer); s.remove(); next();
+    };
+    document.head.appendChild(s);
   }
-  const ro=sq?0:st.shape==='rounded'?1.4:2.6,ri=sq?0:st.shape==='rounded'?.8:1.5;
-  let f='';
-  [[0,0],[n-7,0],[0,n-7]].forEach(([r,c])=>{const x=c+m,y=r+m;
-    f+=`<rect x="${x+.5}" y="${y+.5}" width="6" height="6" rx="${ro}" fill="none" stroke="${st.fg}" stroke-width="1"/><rect x="${x+2}" y="${y+2}" width="3" height="3" rx="${ri}" fill="${st.fg}"/>`});
-  const size=px?`width="${px}" height="${px}"`:'width="100%" style="display:block"';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t} ${t}" ${size}${sq?' shape-rendering="crispEdges"':''}><rect width="${t}" height="${t}" fill="${st.bg}"/><path d="${d}" fill="${st.fg}"/>${f}</svg>`;
-}
-function lum(h){const [r,g,b]=[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*r+.7152*g+.0722*b}
-function render(){
-  const text=TYPES[st.type].build(vals[st.type]);
-  const empty=!text.trim();
-  const warn=$('#warn');let msg='';
-  try{
-    const q=makeQR(empty?'quadra':text);
-    current=empty?null:{q,text};
-    $('#preview').innerHTML=toSVG(q);
-    $('#preview').style.opacity=empty?.14:1;
-    const n=q.getModuleCount();
-    $('#meta').textContent=empty?'\u00a0':`${n} × ${n} modules, error correction ${st.ecc}`;
-  }catch(e){
-    current=null;$('#preview').innerHTML='';
-    msg='That is too much for one QR code. Shorten the content or lower the error correction level.';
-  }
-  $('#empty').style.display=empty?'grid':'none';
-  if(!msg&&!empty){
-    const a=lum(st.fg),b=lum(st.bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
-    if(ratio<3)msg='Low contrast between the code and background. Some scanners may not read it.';
-    else if(a>b)msg='The code is lighter than its background. Some older scanners cannot read inverted codes.';
-  }
-  warn.textContent=msg;warn.classList.toggle('hidden',!msg);
-  ['#dlPng','#dlSvg','#copy'].forEach(s=>$(s).disabled=!current);
-}
-
-/* ---------- UI ---------- */
-function drawTabs(){
-  $('#tabs').innerHTML=Object.entries(TYPES).map(([k,t])=>`<button type="button" role="tab" aria-selected="${k===st.type}" data-k="${k}">${t.label}</button>`).join('');
-}
-function drawFields(){
-  const t=TYPES[st.type],v=vals[st.type];
-  $('#fields').innerHTML=t.fields.map(f=>{
-    const id='f-'+f.k,val=esc(v[f.k]||'');
-    const c=f.sel?`<select id="${id}" data-k="${f.k}" class="field">${f.sel.map(o=>`<option value="${o[0]}"${(v[f.k]||f.sel[0][0])===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>`
-      :f.area?`<textarea id="${id}" data-k="${f.k}" class="field" placeholder="${esc(f.ph)}">${val}</textarea>`
-      :`<input id="${id}" data-k="${f.k}" class="field" type="${f.type||'text'}" placeholder="${esc(f.ph)}" value="${val}" autocomplete="off" ${f.type==='url'?'inputmode="url" autocapitalize="off"':''}>`;
-    return `<div><label for="${id}" class="block text-sm font-semibold mb-1.5">${f.label}</label>${c}</div>`}).join('');
-}
-const glyph=s=>{const p=[[2,2],[18,2],[2,18],[18,18]];const sh=([x,y])=>s==='dots'?`<circle cx="${x+7}" cy="${y+7}" r="6.5"/>`:`<rect x="${x}" y="${y}" width="14" height="14" rx="${s==='rounded'?5:0}"/>`;return `<svg viewBox="0 0 34 34" fill="currentColor" aria-hidden="true">${p.map(sh).join('')}</svg>`};
-function drawShapes(){
-  $('#shapes').innerHTML=[['square','Square'],['rounded','Rounded'],['dots','Dots']].map(([k,l])=>`<button type="button" class="opt" data-s="${k}" aria-pressed="${st.shape===k}">${glyph(k)}${l}</button>`).join('');
-}
-function drawSeg(id,items,key,fmt){
-  $(id).innerHTML=items.map(i=>`<button type="button" data-v="${i}" aria-pressed="${st[key]==i}">${fmt?fmt(i):i}</button>`).join('');
-}
-const PRESETS=[['#0F1B3D','#FFFFFF','Navy on white'],['#0B5D4B','#EEF8F3','Green on mint'],['#7A1F5C','#FFF3FA','Plum on blush'],['#1F3FD1','#EEF1FF','Blue on periwinkle'],['#000000','#FFFFFF','Black on white']];
-function drawPresets(){
-  $('#presets').innerHTML=PRESETS.map(([f,b,n],i)=>`<button type="button" class="swatch" data-i="${i}" title="${n}" aria-label="${n}" aria-pressed="${st.fg.toLowerCase()===f.toLowerCase()&&st.bg.toLowerCase()===b.toLowerCase()}" style="background:${b}"><i style="background:${f}"></i></button>`).join('');
-}
-function syncColors(){$('#fg').value=st.fg;$('#bg').value=st.bg;$('#fgv').textContent=st.fg.toUpperCase();$('#bgv').textContent=st.bg.toUpperCase();
-  $('#fg').parentElement.style.background=st.fg;$('#bg').parentElement.style.background=st.bg;drawPresets()}
-
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.type=b.dataset.k;drawTabs();drawFields();render()});
-$('#fields').addEventListener('input',e=>{const k=e.target.dataset.k;if(!k)return;vals[st.type][k]=e.target.value;render()});
-$('#shapes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.shape=b.dataset.s;drawShapes();render()});
-$('#eccs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.ecc=b.dataset.v;drawSeg('#eccs',['L','M','Q','H'],'ecc',x=>({L:'Low',M:'Medium',Q:'Quartile',H:'High'})[x]);render()});
-$('#sizes').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st.size=+b.dataset.v;drawSeg('#sizes',[512,1024,2048],'size',x=>x+' px')});
-$('#fg').addEventListener('input',e=>{st.fg=e.target.value;syncColors();render()});
-$('#bg').addEventListener('input',e=>{st.bg=e.target.value;syncColors();render()});
-$('#presets').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const p=PRESETS[b.dataset.i];st.fg=p[0];st.bg=p[1];syncColors();render()});
-$('#margin').addEventListener('input',e=>{st.margin=+e.target.value;$('#mv').textContent=st.margin+(st.margin===1?' module':' modules');render()});
-
-/* ---------- Export ---------- */
-let tt;function toast(m){const t=$('#toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,2400)}
-async function save(blob,name){
-  let dl=null;try{dl=await claude.use('downloads')}catch(e){}
-  if(dl){try{await dl.save({filename:name,data:blob});toast('Saved '+name);}catch(e){if(e&&e.code!=='declined')toast('Could not save the file here.')}return}
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Downloading '+name);
-}
-function pngBlob(){return new Promise((res,rej)=>{
-  const img=new Image();
-  img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=st.size;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(img,0,0,st.size,st.size);c.toBlob(b=>b?res(b):rej(),'image/png')};
-  img.onerror=rej;
-  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(toSVG(current.q,st.size));
-})}
-$('#dlPng').addEventListener('click',async()=>{if(!current)return;try{await save(await pngBlob(),'qr-code.png')}catch(e){toast('Could not create the PNG.')}});
-$('#dlSvg').addEventListener('click',()=>{if(!current)return;save(new Blob([toSVG(current.q,st.size)],{type:'image/svg+xml'}),'qr-code.svg')});
-$('#copy').addEventListener('click',async()=>{
-  if(!current)return;
-  try{await navigator.clipboard.write([new ClipboardItem({'image/png':pngBlob()})]);toast('Image copied')}
-  catch(e){toast('Copying is not available here. Use Download PNG instead.')}
+  next();
 });
 
-drawTabs();drawFields();drawShapes();
-drawSeg('#eccs',['L','M','Q','H'],'ecc',x=>({L:'Low',M:'Medium',Q:'Quartile',H:'High'})[x]);
-drawSeg('#sizes',[512,1024,2048],'size',x=>x+' px');
-syncColors();
-if(!window.qrcode){$('#empty').textContent='The QR library failed to load. Check your connection and reload.';}
-else render();
+/* ══════════════════════════════════════════════════════════════
+   2. Theme
+   ══════════════════════════════════════════════════════════════ */
+var root = document.documentElement;
+var mq = window.matchMedia('(prefers-color-scheme:dark)');
+var ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+var ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+
+function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function storeSet(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function isDark() {
+  return root.dataset.theme ? root.dataset.theme === 'dark' : mq.matches;
+}
+function paintThemeBtn() {
+  var b = document.getElementById('theme');
+  if (!b) return;
+  var dark = isDark();
+  b.setAttribute('aria-pressed', String(dark));
+  b.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+  b.innerHTML = dark ? ICON_SUN : ICON_MOON;
+}
+(function initTheme() {
+  var saved = storeGet('quadra-theme');
+  if (saved === 'dark' || saved === 'light') root.dataset.theme = saved;
+  paintThemeBtn();
+  if (mq.addEventListener) mq.addEventListener('change', function () {
+    if (!root.dataset.theme) paintThemeBtn();
+  });
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   3. Data model
+   ══════════════════════════════════════════════════════════════ */
+var $ = function (s) { return document.querySelector(s); };
+var $$ = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
+var esc = function (s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+};
+var wesc = function (s) { return String(s).replace(/([\\;,:"])/g, '\\$1'); };
+
+var TYPES = {
+  url: {
+    label: 'Link',
+    fields: [{ k: 'url', label: 'Web address', ph: 'example.com/menu', type: 'url', im: 'url', ac: 'url' }],
+    build: function (v) {
+      var u = (v.url || '').trim();
+      return u && !/^[a-z][a-z0-9+.-]*:/i.test(u) ? 'https://' + u : u;
+    }
+  },
+  text: {
+    label: 'Text',
+    fields: [{ k: 'text', label: 'Message', ph: 'Anything you want people to read', area: 1 }],
+    build: function (v) { return v.text || ''; }
+  },
+  wifi: {
+    label: 'Wi-Fi',
+    fields: [
+      { k: 'ssid', label: 'Network name', ph: 'Home network', ac: 'off' },
+      { k: 'pass', label: 'Password', ph: 'Leave empty for open networks', ac: 'off' },
+      { k: 'sec', label: 'Security', sel: [['WPA', 'WPA / WPA2 / WPA3'], ['WEP', 'WEP'], ['nopass', 'None']] }
+    ],
+    build: function (v) {
+      if (!(v.ssid || '').trim()) return '';
+      var t = v.sec || 'WPA';
+      return 'WIFI:T:' + t + ';S:' + wesc(v.ssid) + ';' +
+             (t === 'nopass' ? '' : 'P:' + wesc(v.pass || '') + ';') + ';';
+    }
+  },
+  email: {
+    label: 'Email',
+    fields: [
+      { k: 'to', label: 'Send to', ph: 'name@example.com', type: 'email', im: 'email', ac: 'email' },
+      { k: 'sub', label: 'Subject', ph: 'Optional' },
+      { k: 'body', label: 'Message', ph: 'Optional', area: 1 }
+    ],
+    build: function (v) {
+      if (!(v.to || '').trim()) return '';
+      var p = [];
+      if ((v.sub || '').trim()) p.push('subject=' + encodeURIComponent(v.sub.trim()));
+      if ((v.body || '').trim()) p.push('body=' + encodeURIComponent(v.body.trim()));
+      return 'mailto:' + v.to.trim() + (p.length ? '?' + p.join('&') : '');
+    }
+  },
+  phone: {
+    label: 'Phone',
+    fields: [{ k: 'num', label: 'Phone number', ph: '+1 555 010 0199', type: 'tel', im: 'tel', ac: 'tel' }],
+    build: function (v) {
+      var n = (v.num || '').trim();
+      return n ? 'tel:' + n.replace(/[^\d+]/g, '') : '';
+    }
+  }
+};
+
+var st = { type: 'url', shape: 'rounded', fg: '#0F1B3D', bg: '#FFFFFF', ecc: 'M', margin: 2, size: 1024 };
+var vals = { url: {}, text: {}, wifi: { sec: 'WPA' }, email: {}, phone: {} };
+var current = null;
+
+/* ══════════════════════════════════════════════════════════════
+   4. QR → SVG
+   ══════════════════════════════════════════════════════════════ */
+function makeQR(text) {
+  var q = qrcode(0, st.ecc);
+  q.addData(text);
+  q.make();
+  return q;
+}
+
+function toSVG(q, px) {
+  var n = q.getModuleCount();
+  var m = st.margin;
+  var t = n + 2 * m;
+  var sq = st.shape === 'square';
+  var isFinder = function (r, c) {
+    return (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+  };
+
+  var d = '';
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      if (isFinder(r, c) || !q.isDark(r, c)) continue;
+      var x = c + m, y = r + m;
+      if (st.shape === 'dots') {
+        d += 'M' + (x + 0.08) + ' ' + (y + 0.5) +
+             'a.42 .42 0 1 0 .84 0a.42 .42 0 1 0 -.84 0';
+      } else if (st.shape === 'rounded') {
+        d += 'M' + (x + 0.3) + ' ' + y +
+             'h.4a.3 .3 0 0 1 .3 .3v.4a.3 .3 0 0 1 -.3 .3h-.4a.3 .3 0 0 1 -.3 -.3v-.4a.3 .3 0 0 1 .3 -.3z';
+      } else {
+        d += 'M' + x + ' ' + y + 'h1v1h-1z';
+      }
+    }
+  }
+
+  var ro = sq ? 0 : (st.shape === 'rounded' ? 1.4 : 2.6);
+  var ri = sq ? 0 : (st.shape === 'rounded' ? 0.8 : 1.5);
+  var f = '';
+  [[0, 0], [n - 7, 0], [0, n - 7]].forEach(function (p) {
+    var x = p[1] + m, y = p[0] + m;
+    f += '<rect x="' + (x + 0.5) + '" y="' + (y + 0.5) + '" width="6" height="6" rx="' + ro +
+         '" fill="none" stroke="' + st.fg + '" stroke-width="1"/>' +
+         '<rect x="' + (x + 2) + '" y="' + (y + 2) + '" width="3" height="3" rx="' + ri +
+         '" fill="' + st.fg + '"/>';
+  });
+
+  var sizeAttr = px ? ' width="' + px + '" height="' + px + '"' : '';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + t + ' ' + t + '"' +
+         sizeAttr + (sq ? ' shape-rendering="crispEdges"' : '') +
+         ' aria-hidden="true" focusable="false">' +
+         '<rect width="' + t + '" height="' + t + '" fill="' + st.bg + '"/>' +
+         '<path d="' + d + '" fill="' + st.fg + '"/>' + f + '</svg>';
+}
+
+function luminance(hex) {
+  var v = [1, 3, 5].map(function (i) {
+    var c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   5. Render
+   ══════════════════════════════════════════════════════════════ */
+function render() {
+  if (!window.qrcode) return;
+
+  var text = TYPES[st.type].build(vals[st.type]);
+  var isEmpty = !text.trim();
+  var msg = '';
+  var preview = $('#preview');
+  var emptyEl = $('#empty');
+
+  try {
+    var q = makeQR(isEmpty ? 'quadra' : text);
+    current = isEmpty ? null : { q: q, text: text };
+    preview.innerHTML = toSVG(q, null);
+    preview.style.opacity = isEmpty ? '.14' : '1';
+
+    var n = q.getModuleCount();
+    var total = n + 2 * st.margin;
+    $('#meta').textContent = isEmpty
+      ? '\u00a0'
+      : n + ' × ' + n + ' modules · ECC ' + st.ecc +
+        (st.margin ? ' · ' + total + ' × ' + total + ' with margin' : '');
+  } catch (err) {
+    current = null;
+    try {
+      preview.innerHTML = toSVG(makeQR('quadra'), null);
+      preview.style.opacity = '.14';
+    } catch (e2) { preview.innerHTML = ''; }
+    msg = 'Too much data for one QR code. Shorten the content or lower the error correction level.';
+  }
+
+  // Empty / error overlay — always readable, in both themes.
+  if (isEmpty) {
+    emptyEl.textContent = 'Enter something on the left and your code appears here.';
+    emptyEl.style.display = 'grid';
+    $('#meta').textContent = '\u00a0';
+  } else if (!current) {
+    emptyEl.textContent = 'Too much data — shorten it or lower error correction.';
+    emptyEl.style.display = 'grid';
+    $('#meta').textContent = '\u00a0';
+  } else {
+    emptyEl.style.display = 'none';
+  }
+
+  // Contrast / inversion advisory
+  if (!msg && current) {
+    var a = luminance(st.fg), b = luminance(st.bg);
+    var ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    if (ratio < 3) {
+      msg = 'Low contrast between the code and background. Some scanners may not read it.';
+    } else if (a > b) {
+      msg = 'The code is lighter than its background. Some older scanners cannot read inverted codes.';
+    }
+  }
+
+  var warn = $('#warn');
+  warn.textContent = msg;
+  warn.classList.toggle('hidden', !msg);
+
+  ['#dlPng', '#dlSvg', '#copy'].forEach(function (s) { $(s).disabled = !current; });
+}
+
+var renderTimer = null;
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(render, 90);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   6. UI builders
+   ══════════════════════════════════════════════════════════════ */
+function drawTabs() {
+  $('#tabs').innerHTML = Object.keys(TYPES).map(function (k) {
+    var on = k === st.type;
+    return '<button type="button" role="tab" data-k="' + k + '" aria-selected="' + on +
+           '" tabindex="' + (on ? '0' : '-1') + '">' + TYPES[k].label + '</button>';
+  }).join('');
+}
+
+function drawFields() {
+  var t = TYPES[st.type];
+  var v = vals[st.type];
+  $('#fields').innerHTML = t.fields.map(function (f) {
+    var id = 'f-' + f.k;
+    var val = esc(v[f.k] || '');
+    var extra = (f.im ? ' inputmode="' + f.im + '"' : '') +
+                (f.ac ? ' autocomplete="' + f.ac + '"' : ' autocomplete="off"') +
+                (f.type === 'url' ? ' autocapitalize="off" spellcheck="false"' : '');
+    var ctrl;
+    if (f.sel) {
+      ctrl = '<select id="' + id + '" data-k="' + f.k + '" class="field">' +
+        f.sel.map(function (o) {
+          var sel = (v[f.k] || f.sel[0][0]) === o[0] ? ' selected' : '';
+          return '<option value="' + o[0] + '"' + sel + '>' + o[1] + '</option>';
+        }).join('') + '</select>';
+    } else if (f.area) {
+      ctrl = '<textarea id="' + id + '" data-k="' + f.k + '" class="field" placeholder="' +
+             esc(f.ph) + '"' + extra + '>' + val + '</textarea>';
+    } else {
+      ctrl = '<input id="' + id + '" data-k="' + f.k + '" class="field" type="' +
+             (f.type || 'text') + '" placeholder="' + esc(f.ph) + '" value="' + val + '"' +
+             extra + '>';
+    }
+    return '<div><label for="' + id + '" class="lbl">' + f.label + '</label>' + ctrl + '</div>';
+  }).join('');
+}
+
+function glyph(shape) {
+  var pts = [[2, 2], [18, 2], [2, 18], [18, 18]];
+  var body = pts.map(function (p) {
+    return shape === 'dots'
+      ? '<circle cx="' + (p[0] + 7) + '" cy="' + (p[1] + 7) + '" r="6.5"/>'
+      : '<rect x="' + p[0] + '" y="' + p[1] + '" width="14" height="14" rx="' +
+        (shape === 'rounded' ? 5 : 0) + '"/>';
+  }).join('');
+  return '<svg viewBox="0 0 34 34" fill="currentColor" aria-hidden="true">' + body + '</svg>';
+}
+
+function drawShapes() {
+  $('#shapes').innerHTML = [['square', 'Square'], ['rounded', 'Rounded'], ['dots', 'Dots']]
+    .map(function (o) {
+      var on = st.shape === o[0];
+      return '<button type="button" class="opt" data-s="' + o[0] + '" aria-pressed="' + on +
+             '" tabindex="' + (on ? '0' : '-1') + '">' + glyph(o[0]) + o[1] + '</button>';
+    }).join('');
+}
+
+function drawSeg(id, items, key, fmt) {
+  var active = st[key];
+  $(id).innerHTML = items.map(function (i) {
+    var on = active === i;
+    return '<button type="button" data-v="' + i + '" aria-pressed="' + on +
+           '" tabindex="' + (on ? '0' : '-1') + '">' + (fmt ? fmt(i) : i) + '</button>';
+  }).join('');
+}
+
+var PRESETS = [
+  ['#0F1B3D', '#FFFFFF', 'Navy on white'],
+  ['#0B5D4B', '#EEF8F3', 'Green on mint'],
+  ['#7A1F5C', '#FFF3FA', 'Plum on blush'],
+  ['#1F3FD1', '#EEF1FF', 'Blue on periwinkle'],
+  ['#000000', '#FFFFFF', 'Black on white']
+];
+
+function drawPresets() {
+  $('#presets').innerHTML = PRESETS.map(function (p, i) {
+    var on = st.fg.toLowerCase() === p[0].toLowerCase() &&
+             st.bg.toLowerCase() === p[1].toLowerCase();
+    return '<button type="button" class="swatch" data-i="' + i + '" title="' + p[2] +
+           '" aria-label="' + p[2] + '" aria-pressed="' + on +
+           '" style="background:' + p[1] + '"><i style="background:' + p[0] + '"></i></button>';
+  }).join('');
+}
+
+function syncColors() {
+  $('#fg').value = st.fg;
+  $('#bg').value = st.bg;
+  $('#fgv').textContent = st.fg.toUpperCase();
+  $('#bgv').textContent = st.bg.toUpperCase();
+  $('#fg').parentElement.style.background = st.fg;
+  $('#bg').parentElement.style.background = st.bg;
+  drawPresets();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   7. Keyboard navigation for segmented controls
+   ══════════════════════════════════════════════════════════════ */
+function segKeys(container) {
+  container.addEventListener('keydown', function (e) {
+    var btns = Array.prototype.slice.call(container.querySelectorAll('button:not(:disabled)'));
+    var i = btns.indexOf(document.activeElement);
+    if (i < 0) return;
+    var j = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % btns.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + btns.length) % btns.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = btns.length - 1;
+    if (j === null) return;
+    e.preventDefault();
+    btns[j].focus();
+    btns[j].click();
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   8. Export
+   ══════════════════════════════════════════════════════════════ */
+var toastTimer;
+function toast(m) {
+  var t = $('#toast');
+  t.textContent = m;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.style.opacity = '0'; }, 2400);
+}
+
+function anchorDownload(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+}
+
+async function save(blob, name) {
+  // Optional host-provided save API
+  if (typeof claude !== 'undefined' && claude && typeof claude.use === 'function') {
+    try {
+      var dl = await claude.use('downloads');
+      if (dl && typeof dl.save === 'function') {
+        await dl.save({ filename: name, data: blob });
+        toast('Saved ' + name);
+        return;
+      }
+    } catch (e) { /* fall through to anchor download */ }
+  }
+  anchorDownload(blob, name);
+  toast('Downloading ' + name);
+}
+
+function pngBlob() {
+  return new Promise(function (resolve, reject) {
+    if (!current) { reject(new Error('nothing to export')); return; }
+    var img = new Image();
+    img.onload = function () {
+      try {
+        var c = document.createElement('canvas');
+        c.width = c.height = st.size;
+        var ctx = c.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0, st.size, st.size);
+        c.toBlob(function (b) { b ? resolve(b) : reject(new Error('toBlob failed')); }, 'image/png');
+      } catch (e) { reject(e); }
+    };
+    img.onerror = function () { reject(new Error('svg rasterisation failed')); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' +
+              encodeURIComponent(toSVG(current.q, st.size));
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   9. Wire everything up
+   ══════════════════════════════════════════════════════════════ */
+function boot() {
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+  drawTabs();
+  drawFields();
+  drawShapes();
+  drawSeg('#eccs', ['L', 'M', 'Q', 'H'], 'ecc', function (x) {
+    return { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[x];
+  });
+  drawSeg('#sizes', [512, 1024, 2048], 'size', function (x) { return x + ' px'; });
+  syncColors();
+  render();
+
+  ['#tabs', '#shapes', '#eccs', '#sizes', '#presets'].forEach(function (s) {
+    segKeys($(s));
+  });
+
+  // Theme
+  $('#theme').addEventListener('click', function () {
+    root.dataset.theme = isDark() ? 'light' : 'dark';
+    storeKey('quadra-theme', root.dataset.theme);
+    paintThemeBtn();
+  });
+
+  // Content type tabs
+  $('#tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    st.type = b.dataset.k;
+    drawTabs();
+    drawFields();
+    render();
+    var f = $('#fields input, #fields textarea, #fields select');
+    if (f && window.matchMedia('(min-width:1024px)').matches) f.focus();
+  });
+
+  // Field input
+  $('#fields').addEventListener('input', function (e) {
+    var k = e.target.dataset.k;
+    if (!k) return;
+    vals[st.type][k] = e.target.value;
+    scheduleRender();
+  });
+  $('#fields').addEventListener('change', function (e) {
+    var k = e.target.dataset.k;
+    if (!k) return;
+    vals[st.type][k] = e.target.value;
+    render();
+  });
+
+  // Style controls
+  $('#shapes').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    st.shape = b.dataset.s;
+    drawShapes();
+    render();
+  });
+
+  $('#eccs').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    st.ecc = b.dataset.v;
+    drawSeg('#eccs', ['L', 'M', 'Q', 'H'], 'ecc', function (x) {
+      return { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[x];
+    });
+    render();
+  });
+
+  $('#sizes').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    st.size = +b.dataset.v;
+    drawSeg('#sizes', [512, 1024, 2048], 'size', function (x) { return x + ' px'; });
+  });
+
+  $('#fg').addEventListener('input', function (e) { st.fg = e.target.value; syncColors(); scheduleRender(); });
+  $('#bg').addEventListener('input', function (e) { st.bg = e.target.value; syncColors(); scheduleRender(); });
+
+  $('#presets').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var p = PRESETS[+b.dataset.i];
+    st.fg = p[0]; st.bg = p[1];
+    syncColors();
+    render();
+  });
+
+  $('#margin').addEventListener('input', function (e) {
+    st.margin = +e.target.value;
+    $('#mv').textContent = st.margin + (st.margin === 1 ? ' module' : ' modules');
+    scheduleRender();
+  });
+
+  // Exports
+  $('#dlPng').addEventListener('click', async function () {
+    if (!current) return;
+    try { await save(await pngBlob(), 'qr-code.png'); }
+    catch (e) { toast('Could not create the PNG. Try a smaller size.'); }
+  });
+
+  $('#dlSvg').addEventListener('click', function () {
+    if (!current) return;
+    try {
+      save(new Blob([toSVG(current.q, st.size)], { type: 'image/svg+xml' }), 'qr-code.svg');
+    } catch (e) { toast('Could not create the SVG.'); }
+  });
+
+  $('#copy').addEventListener('click', async function () {
+    if (!current) return;
+    if (!navigator.clipboard || typeof ClipboardItem === 'undefined') {
+      toast('Copying is not available here. Use Download PNG instead.');
+      return;
+    }
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob() })]);
+      toast('Image copied');
+    } catch (e) {
+      toast('Copying is not available here. Use Download PNG instead.');
+    }
+  });
+}
+
+function storeKey(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+/* ══════════════════════════════════════════════════════════════
+   10. Go
+   ══════════════════════════════════════════════════════════════ */
+qrReady.then(boot).catch(function () {
+  var e = document.getElementById('empty');
+  e.textContent = 'The QR library could not load. Check your connection and reload.';
+  e.style.display = 'grid';
+  document.getElementById('preview').innerHTML = '';
+  ['dlPng', 'dlSvg', 'copy'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.disabled = true;
+  });
+});
 </script>
 </body>
 </html>
