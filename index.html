@@ -2,9 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=05a0aa8f-258d-46cf-99f8-373313e9b3bf
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Quadra – QR code generator</title>
+<meta name="description" content="Free QR code generator for links, text, Wi-Fi, email and phone numbers. Style it and download PNG or SVG — everything runs in your browser.">
+<meta property="og:title" content="Quadra – QR code generator">
+<meta property="og:description" content="Create styled QR codes for links, Wi-Fi, email and more. Generated entirely in your browser.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0F1B3D">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='10' fill='%230F1B3D'/%3E%3Cpath d='M7 7h8v8H7zM19 7h8v8h-8zM7 19h8v8H7z' fill='none' stroke='%23FFB400' stroke-width='2'/%3E%3Cpath d='M10 10h2v2h-2zM22 10h2v2h-2zM10 22h2v2h-2zM19 19h3v3h-3zM24 24h3v3h-3zM24 19h3v2h-3z' fill='%23fff'/%3E%3C/svg%3E">
+<script>
+  // Apply the saved theme before first paint to avoid a flash of the wrong theme.
+  try {
+    var t = localStorage.getItem('quadra-theme');
+    if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=DM+Sans:wght@400;500;600&display=swap"
@@ -332,14 +348,17 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:999px;
 
 <script>
 /* ══════════════════════════════════════════════════════════════
-   1. QR library loader — async, multi-CDN, with timeout.
+   1. QR library loader — async, local copy then CDNs, with timeout.
       Never blocks first paint.
    ══════════════════════════════════════════════════════════════ */
 var qrReady = new Promise(function (resolve, reject) {
+  // Same-origin copy first; CDN fallbacks are pinned to the identical file via SRI.
+  var SRI = 'sha384-8FWZA6BGMXhsfO+BLtrJK0We6gg5o1JyO8xQm6peWDEUs17ACA5ziE/NIAkl9z2k';
   var urls = [
-    'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-    'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js',
-    'https://unpkg.com/qrcode-generator@1.4.4/qrcode.min.js'
+    '/vendor/qrcode.js',
+    'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.js',
+    'https://unpkg.com/qrcode-generator@1.4.4/qrcode.js'
   ];
   var i = 0;
   function next() {
@@ -350,6 +369,7 @@ var qrReady = new Promise(function (resolve, reject) {
       if (settled) return;
       settled = true; s.remove(); next();
     }, 8000);
+    if (/^https:/.test(urls[i])) { s.integrity = SRI; s.crossOrigin = 'anonymous'; }
     s.src = urls[i++];
     s.async = true;
     s.onload = function () {
@@ -394,6 +414,11 @@ function paintThemeBtn() {
   if (mq.addEventListener) mq.addEventListener('change', function () {
     if (!root.dataset.theme) paintThemeBtn();
   });
+  document.getElementById('theme').addEventListener('click', function () {
+    root.dataset.theme = isDark() ? 'light' : 'dark';
+    storeSet('quadra-theme', root.dataset.theme);
+    paintThemeBtn();
+  });
 })();
 
 /* ══════════════════════════════════════════════════════════════
@@ -414,7 +439,13 @@ var TYPES = {
     fields: [{ k: 'url', label: 'Web address', ph: 'example.com/menu', type: 'url', im: 'url', ac: 'url' }],
     build: function (v) {
       var u = (v.url || '').trim();
-      return u && !/^[a-z][a-z0-9+.-]*:/i.test(u) ? 'https://' + u : u;
+      // A scheme is "name:" not followed by a digit, so "example.com:8080" and
+      // "localhost:3000" are read as host:port and still get https:// prepended.
+      return u && !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(u) ? 'https://' + u : u;
+    },
+    check: function (text) {
+      return /^https?:\/\/[^\s/?#]/i.test(text) ? '' :
+        'Links must be a web address starting with http:// or https://.';
     }
   },
   text: {
@@ -427,13 +458,15 @@ var TYPES = {
     fields: [
       { k: 'ssid', label: 'Network name', ph: 'Home network', ac: 'off' },
       { k: 'pass', label: 'Password', ph: 'Leave empty for open networks', ac: 'off' },
-      { k: 'sec', label: 'Security', sel: [['WPA', 'WPA / WPA2 / WPA3'], ['WEP', 'WEP'], ['nopass', 'None']] }
+      { k: 'sec', label: 'Security', sel: [['WPA', 'WPA / WPA2 / WPA3'], ['WEP', 'WEP'], ['nopass', 'None']] },
+      { k: 'hid', label: 'Hidden network', sel: [['', 'No, it is visible'], ['true', 'Yes, it is hidden']] }
     ],
     build: function (v) {
       if (!(v.ssid || '').trim()) return '';
       var t = v.sec || 'WPA';
       return 'WIFI:T:' + t + ';S:' + wesc(v.ssid) + ';' +
-             (t === 'nopass' ? '' : 'P:' + wesc(v.pass || '') + ';') + ';';
+             (t === 'nopass' ? '' : 'P:' + wesc(v.pass || '') + ';') +
+             (v.hid === 'true' ? 'H:true;' : '') + ';';
     }
   },
   email: {
@@ -536,19 +569,20 @@ function render() {
 
   var text = TYPES[st.type].build(vals[st.type]);
   var isEmpty = !text.trim();
+  var invalid = !isEmpty && TYPES[st.type].check ? TYPES[st.type].check(text) : '';
   var msg = '';
   var preview = $('#preview');
   var emptyEl = $('#empty');
 
   try {
-    var q = makeQR(isEmpty ? 'quadra' : text);
-    current = isEmpty ? null : { q: q, text: text };
+    var q = makeQR(isEmpty || invalid ? 'quadra' : text);
+    current = isEmpty || invalid ? null : { q: q, text: text };
     preview.innerHTML = toSVG(q, null);
-    preview.style.opacity = isEmpty ? '.14' : '1';
+    preview.style.opacity = current ? '1' : '.14';
 
     var n = q.getModuleCount();
     var total = n + 2 * st.margin;
-    $('#meta').textContent = isEmpty
+    $('#meta').textContent = !current
       ? '\u00a0'
       : n + ' × ' + n + ' modules · ECC ' + st.ecc +
         (st.margin ? ' · ' + total + ' × ' + total + ' with margin' : '');
@@ -564,6 +598,10 @@ function render() {
   // Empty / error overlay — always readable, in both themes.
   if (isEmpty) {
     emptyEl.textContent = 'Enter something on the left and your code appears here.';
+    emptyEl.style.display = 'grid';
+    $('#meta').textContent = '\u00a0';
+  } else if (invalid) {
+    emptyEl.textContent = invalid;
     emptyEl.style.display = 'grid';
     $('#meta').textContent = '\u00a0';
   } else if (!current) {
@@ -738,18 +776,7 @@ function anchorDownload(blob, name) {
   setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
 }
 
-async function save(blob, name) {
-  // Optional host-provided save API
-  if (typeof claude !== 'undefined' && claude && typeof claude.use === 'function') {
-    try {
-      var dl = await claude.use('downloads');
-      if (dl && typeof dl.save === 'function') {
-        await dl.save({ filename: name, data: blob });
-        toast('Saved ' + name);
-        return;
-      }
-    } catch (e) { /* fall through to anchor download */ }
-  }
+function save(blob, name) {
   anchorDownload(blob, name);
   toast('Downloading ' + name);
 }
@@ -757,6 +784,7 @@ async function save(blob, name) {
 function pngBlob() {
   return new Promise(function (resolve, reject) {
     if (!current) { reject(new Error('nothing to export')); return; }
+    var units = current.q.getModuleCount() + 2 * st.margin;
     var img = new Image();
     img.onload = function () {
       try {
@@ -764,7 +792,13 @@ function pngBlob() {
         c.width = c.height = st.size;
         var ctx = c.getContext('2d');
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, 0, 0, st.size, st.size);
+        // Snap each module to a whole number of pixels so edges stay sharp,
+        // then centre the code and fill the leftover border with the background.
+        var inner = Math.floor(st.size / units) * units;
+        var off = Math.floor((st.size - inner) / 2);
+        ctx.fillStyle = st.bg;
+        ctx.fillRect(0, 0, st.size, st.size);
+        ctx.drawImage(img, off, off, inner, inner);
         c.toBlob(function (b) { b ? resolve(b) : reject(new Error('toBlob failed')); }, 'image/png');
       } catch (e) { reject(e); }
     };
@@ -792,13 +826,6 @@ function boot() {
 
   ['#tabs', '#shapes', '#eccs', '#sizes', '#presets'].forEach(function (s) {
     segKeys($(s));
-  });
-
-  // Theme
-  $('#theme').addEventListener('click', function () {
-    root.dataset.theme = isDark() ? 'light' : 'dark';
-    storeKey('quadra-theme', root.dataset.theme);
-    paintThemeBtn();
   });
 
   // Content type tabs
@@ -900,8 +927,6 @@ function boot() {
   });
 }
 
-function storeKey(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-
 /* ══════════════════════════════════════════════════════════════
    10. Go
    ══════════════════════════════════════════════════════════════ */
@@ -916,5 +941,6 @@ qrReady.then(boot).catch(function () {
   });
 });
 </script>
+<script async src="/.netlify/scripts/ar" data-netlify-deploy-id="6ac000a65b9257c22c735ec7" data-netlify-site-id="05a0aa8f-258d-46cf-99f8-373313e9b3bf" data-agent-runner-id="6abffeed1e7f0109b5eef089"></script>
 </body>
 </html>
